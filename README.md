@@ -9,9 +9,9 @@ A FastAPI-based microservice that provides document conversion capabilities usin
 ## Features
 
 - Document conversion to Markdown, HTML, and Text formats
-- Code understanding enrichment
-- Formula understanding enrichment
-- Picture classification and description
+- Code understanding enrichment (enabled by default)
+- Formula understanding enrichment (enabled by default)
+- Picture classification and description (enabled by default)
 - API Key authentication
 - RESTful API endpoints
 - CORS support
@@ -71,24 +71,9 @@ Headers:
 
 Body:
 {
-    "source": "https://example.com/doc.pdf",
-    "enrich_code": true,
-    "enrich_formula": true,
-    "enrich_pictures": true,
-    "picture_scale": 2,
-    "enrich_picture_description": true,
-    "vision_model": "granite",
-    "markdown_params": {
-        "from_element": 0,
-        "to_element": 1000000,
-        "escape_underscores": true,
-        "image_placeholder": "<!-- image -->",
-        "enable_chart_tables": true,
-        "image_mode": "PLACEHOLDER",
-        "indent": 4,
-        "text_width": -1,
-        "page_break_placeholder": null
-    }
+    "source": "/path/to/document.pdf" (OR URL),
+    "from_element": 0,
+    "to_element": 1000000
 }
 ```
 
@@ -101,22 +86,9 @@ Headers:
 
 Body:
 {
-    "source": "https://example.com/doc.pdf",
-    "enrich_code": true,
-    "enrich_formula": true,
-    "enrich_pictures": true,
-    "picture_scale": 2,
-    "enrich_picture_description": true,
-    "vision_model": "granite",
-    "html_params": {
-        "from_element": 0,
-        "to_element": 1000000,
-        "enable_chart_tables": true,
-        "formula_to_mathml": true,
-        "html_lang": "en",
-        "html_head": "null",
-        "split_page_view": false
-    }
+    "source": "/path/to/document.pdf" (OR URL),
+    "from_element": 0,
+    "to_element": 1000000
 }
 ```
 
@@ -129,71 +101,72 @@ Headers:
 
 Body:
 {
-    "source": "https://example.com/doc.pdf",
-    "enrich_code": true,
-    "enrich_formula": true,
-    "enrich_pictures": true,
-    "picture_scale": 2,
-    "enrich_picture_description": true,
-    "vision_model": "granite",
-    "text_params": {
-        "from_element": 0,
-        "to_element": 1000000
-    }
+    "source": "/path/to/document.pdf" (OR URL),
+    "from_element": 0,
+    "to_element": 1000000
 }
 ```
 
 Response for all endpoints:
 ```json
 {
-    "content": "Converted document content"
+    "content": "Converted document content",
+    "format": "markdown|html|text"
 }
 ```
 
-## Export Format Options
+## Example cURL
 
-### Markdown Export Parameters
+```
+curl -X POST "http://localhost:8000/api/v1/document/convert/text" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_api_key" \
+  -d '{
+    "source": "/mnt/c/Users/Marcos Gabriel/Documents/web-dev/helpjuice/Velocity Running Co - Sales Report.pdf"
+  }'
+```
+
+## Request Parameters
+
+### Source
+The `source` parameter can be:
+- A URL (starting with `http://` or `https://`)
+- A local file path (starting with `/`, `./`, or `../`)
+
+For Windows paths in WSL, use the `/mnt/c/` prefix:
 ```json
 {
-    "format": "markdown",
-    "markdown_params": {
-        "from_element": 0,
-        "to_element": 1000000,
-        "escape_underscores": true,
-        "image_placeholder": "<!-- image -->",
-        "enable_chart_tables": true,
-        "image_mode": "PLACEHOLDER",
-        "indent": 4,
-        "text_width": -1,
-        "page_break_placeholder": null
-    }
+    "source": "/mnt/c/Users/username/Documents/document.pdf"
 }
 ```
 
-### HTML Export Parameters
+### Element Range
+- `from_element`: Start element index (inclusive), defaults to 0
+- `to_element`: End element index (exclusive), defaults to 1000000
+
+## Error Responses
+
+### Invalid API Key (401)
 ```json
 {
-    "format": "html",
-    "html_params": {
-        "from_element": 0,
-        "to_element": 1000000,
-        "enable_chart_tables": true,
-        "formula_to_mathml": true,
-        "html_lang": "en",
-        "html_head": "null",
-        "split_page_view": false
-    }
+    "error": "Unauthorized",
+    "detail": "Invalid API Key"
 }
 ```
 
-### Text Export Parameters
+### Invalid Request Parameters (400)
 ```json
 {
-    "format": "text",
-    "text_params": {
-        "from_element": 0,
-        "to_element": 1000000
-    }
+    "error": "Bad Request",
+    "detail": "Error message"
+}
+```
+
+### Validation Error (422)
+```json
+{
+    "error": "Validation Error",
+    "detail": "Error message"
 }
 ```
 
