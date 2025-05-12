@@ -2,9 +2,16 @@
 
 A FastAPI-based microservice that provides document conversion capabilities using the Docling library.
 
+
+## PENDING
+- Fix tests
+
 ## Features
 
-- Document conversion to Markdown
+- Document conversion to Markdown, HTML, and Text formats
+- Code understanding enrichment
+- Formula understanding enrichment
+- Picture classification and description
 - API Key authentication
 - RESTful API endpoints
 - CORS support
@@ -57,15 +64,163 @@ Once the service is running, you can access:
 
 ### Convert Document
 ```http
-POST /api/v1/document/convert?source=<document_url>
+POST /api/v1/document/convert
 Headers:
   X-API-Key: your_api_key
+  Content-Type: application/json
+
+Body:
+{
+    "source": "https://example.com/doc.pdf",
+    "enrich_code": true,
+    "enrich_formula": true,
+    "enrich_pictures": true,
+    "picture_scale": 2,
+    "enrich_picture_description": true,
+    "vision_model": "granite",
+    "export_config": {
+        "format": "html",
+        "html_params": {
+            "formula_to_mathml": true,
+            "html_lang": "en",
+            "split_page_view": true
+        }
+    }
+}
 ```
 
 Response:
 ```json
 {
-    "markdown": "Converted document in markdown format"
+    "content": "Converted document content"
+}
+```
+
+### Enrich Code
+```http
+POST /api/v1/document/enrich-code
+Headers:
+  X-API-Key: your_api_key
+  Content-Type: application/json
+
+Body:
+{
+    "source": "https://example.com/doc.pdf",
+    "export_config": {
+        "format": "markdown",
+        "markdown_params": {
+            "escape_underscores": true,
+            "indent": 2,
+            "text_width": 80
+        }
+    }
+}
+```
+
+### Enrich Formula
+```http
+POST /api/v1/document/enrich-formula
+Headers:
+  X-API-Key: your_api_key
+  Content-Type: application/json
+
+Body:
+{
+    "source": "https://example.com/doc.pdf",
+    "export_config": {
+        "format": "html",
+        "html_params": {
+            "formula_to_mathml": true
+        }
+    }
+}
+```
+
+### Enrich Pictures
+```http
+POST /api/v1/document/enrich-pictures
+Headers:
+  X-API-Key: your_api_key
+  Content-Type: application/json
+
+Body:
+{
+    "source": "https://example.com/doc.pdf",
+    "picture_scale": 2,
+    "export_config": {
+        "format": "markdown",
+        "markdown_params": {
+            "image_placeholder": "<!-- image -->",
+            "enable_chart_tables": true
+        }
+    }
+}
+```
+
+### Enrich Picture Description
+```http
+POST /api/v1/document/enrich-picture-description
+Headers:
+  X-API-Key: your_api_key
+  Content-Type: application/json
+
+Body:
+{
+    "source": "https://example.com/doc.pdf",
+    "vision_model": "granite",
+    "export_config": {
+        "format": "html",
+        "html_params": {
+            "enable_chart_tables": true
+        }
+    }
+}
+```
+
+## Export Format Options
+
+### Markdown Export Parameters
+```json
+{
+    "format": "markdown",
+    "markdown_params": {
+        "from_element": 0,
+        "to_element": 1000000,
+        "escape_underscores": true,
+        "image_placeholder": "<!-- image -->",
+        "enable_chart_tables": true,
+        "image_mode": "PLACEHOLDER",
+        "indent": 4,
+        "text_width": -1,
+        "page_break_placeholder": null
+    }
+}
+```
+
+### HTML Export Parameters
+```json
+{
+    "format": "html",
+    "html_params": {
+        "from_element": 0,
+        "to_element": 1000000,
+        "enable_chart_tables": true,
+        "formula_to_mathml": true,
+        "html_lang": "en",
+        "html_head": "null",
+        "split_page_view": false
+    }
+}
+```
+
+### Text Export Parameters
+```json
+{
+    "format": "text",
+    "text_params": {
+        "from_element": 0,
+        "to_element": 1000000
+    }
 }
 ```
 
@@ -102,7 +257,3 @@ To run the service in development mode with auto-reload:
 ```bash
 uvicorn main:app --reload
 ```
-
-
-## PENDING
-- Fix tests
