@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import api_router
 from app.core.security import validate_api_key
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import HTTPException
 
 app = FastAPI(title="Docling Microservice")
 
@@ -17,9 +19,15 @@ app.add_middleware(
 # Add API key validation middleware
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
-    await validate_api_key(request)
-    response = await call_next(request)
-    return response
+    try:
+        await validate_api_key(request)
+        response = await call_next(request)
+        return response
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"error": "Unauthorized", "detail": e.detail}
+        )
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
