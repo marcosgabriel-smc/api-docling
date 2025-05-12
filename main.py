@@ -1,43 +1,29 @@
-from fastapi import FastAPI, Query, Depends, HTTPException, status, Request
-from fastapi.security import APIKeyHeader
-from docling.document_converter import DocumentConverter
-from dotenv import load_dotenv
-import os
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from app.api import api_router
+from app.core.security import validate_api_key
 
-load_dotenv()
+app = FastAPI(title="Docling Microservice")
 
-app = FastAPI()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Modify this in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-API_KEY_NAME = "X-API-Key"
-API_KEY = os.getenv("API_KEY") 
-
-api_key_header = APIKeyHeader(name=API_KEY_NAME)
-
-async def get_api_key(api_key: str = Depends(api_key_header)):
-    if api_key != API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
-    return api_key
-
+# Add API key validation middleware
 @app.middleware("http")
-async def validate_api_key(request: Request, call_next):
-    api_key = request.headers.get(API_KEY_NAME)
-    if api_key != API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API Key",
-        )
+async def api_key_middleware(request: Request, call_next):
+    await validate_api_key(request)
     response = await call_next(request)
     return response
 
+# Include API router
+app.include_router(api_router, prefix="/api/v1")
+
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Docling Microservice!"}
-
-@app.post("/convert")
-async def convert_document(source: str = Query(...), api_key: str = Depends(get_api_key)):
-    converter = DocumentConverter()
-    result = converter.convert(source)
-    return {"markdown": result.document.export_to_markdown()} 
+    return {"message": "Welcome to the Docling Microservice!"} 
