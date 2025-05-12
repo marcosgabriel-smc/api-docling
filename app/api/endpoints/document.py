@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Body
 from app.services.document_service import DocumentService, VisionModel, ExportFormat, ImageRefMode, ContentLayer, DocItemLabel
 from typing import Optional, Set
 from pydantic import BaseModel, Field
@@ -28,13 +28,7 @@ class HtmlExportParams(BaseExportParams):
 class TextExportParams(BaseExportParams):
     pass
 
-class ExportConfig(BaseModel):
-    format: ExportFormat = Field(ExportFormat.MARKDOWN, description="Format to export the document to")
-    markdown_params: Optional[MarkdownExportParams] = Field(None, description="Markdown export parameters")
-    html_params: Optional[HtmlExportParams] = Field(None, description="HTML export parameters")
-    text_params: Optional[TextExportParams] = Field(None, description="Text export parameters")
-
-class ConvertRequest(BaseModel):
+class BaseRequest(BaseModel):
     source: str = Field(..., description="Source document URL or path")
     enrich_code: bool = Field(False, description="Enable code understanding enrichment")
     enrich_formula: bool = Field(False, description="Enable formula understanding enrichment")
@@ -42,22 +36,21 @@ class ConvertRequest(BaseModel):
     picture_scale: int = Field(2, description="Scale factor for generated picture images", ge=1, le=10)
     enrich_picture_description: bool = Field(False, description="Enable picture description enrichment")
     vision_model: VisionModel = Field(VisionModel.GRANITE, description="Vision model to use for picture description")
-    export_config: ExportConfig = Field(..., description="Export configuration")
+
+class ConvertToMarkdownRequest(BaseRequest):
+    markdown_params: MarkdownExportParams = Field(..., description="Markdown export parameters")
+
+class ConvertToHtmlRequest(BaseRequest):
+    html_params: HtmlExportParams = Field(..., description="HTML export parameters")
+
+class ConvertToTextRequest(BaseRequest):
+    text_params: TextExportParams = Field(..., description="Text export parameters")
 
 router = APIRouter()
 document_service = DocumentService()
 
-@router.post("/convert")
-async def convert_document(request: ConvertRequest):
-    # Extract export parameters based on format
-    export_params = {}
-    if request.export_config.format == ExportFormat.MARKDOWN and request.export_config.markdown_params:
-        export_params = request.export_config.markdown_params.dict()
-    elif request.export_config.format == ExportFormat.HTML and request.export_config.html_params:
-        export_params = request.export_config.html_params.dict()
-    elif request.export_config.format == ExportFormat.TEXT and request.export_config.text_params:
-        export_params = request.export_config.text_params.dict()
-
+@router.post("/convert/markdown")
+async def convert_to_markdown(request: ConvertToMarkdownRequest):
     result = await document_service.convert_document(
         source=request.source,
         enrich_code=request.enrich_code,
@@ -66,95 +59,37 @@ async def convert_document(request: ConvertRequest):
         picture_scale=request.picture_scale,
         enrich_picture_description=request.enrich_picture_description,
         vision_model=request.vision_model,
-        export_format=request.export_config.format,
-        **export_params
+        export_format=ExportFormat.MARKDOWN,
+        **request.markdown_params.dict()
     )
     return {"content": result}
 
-@router.post("/enrich-code")
-async def enrich_code(
-    source: str = Query(...),
-    export_config: ExportConfig = Body(...)
-):
-    export_params = {}
-    if export_config.format == ExportFormat.MARKDOWN and export_config.markdown_params:
-        export_params = export_config.markdown_params.dict()
-    elif export_config.format == ExportFormat.HTML and export_config.html_params:
-        export_params = export_config.html_params.dict()
-    elif export_config.format == ExportFormat.TEXT and export_config.text_params:
-        export_params = export_config.text_params.dict()
-
+@router.post("/convert/html")
+async def convert_to_html(request: ConvertToHtmlRequest):
     result = await document_service.convert_document(
-        source=source,
-        enrich_code=True,
-        export_format=export_config.format,
-        **export_params
+        source=request.source,
+        enrich_code=request.enrich_code,
+        enrich_formula=request.enrich_formula,
+        enrich_pictures=request.enrich_pictures,
+        picture_scale=request.picture_scale,
+        enrich_picture_description=request.enrich_picture_description,
+        vision_model=request.vision_model,
+        export_format=ExportFormat.HTML,
+        **request.html_params.dict()
     )
     return {"content": result}
 
-@router.post("/enrich-formula")
-async def enrich_formula(
-    source: str = Query(...),
-    export_config: ExportConfig = Body(...)
-):
-    export_params = {}
-    if export_config.format == ExportFormat.MARKDOWN and export_config.markdown_params:
-        export_params = export_config.markdown_params.dict()
-    elif export_config.format == ExportFormat.HTML and export_config.html_params:
-        export_params = export_config.html_params.dict()
-    elif export_config.format == ExportFormat.TEXT and export_config.text_params:
-        export_params = export_config.text_params.dict()
-
+@router.post("/convert/text")
+async def convert_to_text(request: ConvertToTextRequest):
     result = await document_service.convert_document(
-        source=source,
-        enrich_formula=True,
-        export_format=export_config.format,
-        **export_params
-    )
-    return {"content": result}
-
-@router.post("/enrich-pictures")
-async def enrich_pictures(
-    source: str = Query(...),
-    picture_scale: int = Query(2, description="Scale factor for generated picture images", ge=1, le=10),
-    export_config: ExportConfig = Body(...)
-):
-    export_params = {}
-    if export_config.format == ExportFormat.MARKDOWN and export_config.markdown_params:
-        export_params = export_config.markdown_params.dict()
-    elif export_config.format == ExportFormat.HTML and export_config.html_params:
-        export_params = export_config.html_params.dict()
-    elif export_config.format == ExportFormat.TEXT and export_config.text_params:
-        export_params = export_config.text_params.dict()
-
-    result = await document_service.convert_document(
-        source=source,
-        enrich_pictures=True,
-        picture_scale=picture_scale,
-        export_format=export_config.format,
-        **export_params
-    )
-    return {"content": result}
-
-@router.post("/enrich-picture-description")
-async def enrich_picture_description(
-    source: str = Query(...),
-    vision_model: VisionModel = Query(VisionModel.GRANITE, description="Vision model to use for picture description"),
-    export_config: ExportConfig = Body(...)
-):
-    export_params = {}
-    if export_config.format == ExportFormat.MARKDOWN and export_config.markdown_params:
-        export_params = export_config.markdown_params.dict()
-    elif export_config.format == ExportFormat.HTML and export_config.html_params:
-        export_params = export_config.html_params.dict()
-    elif export_config.format == ExportFormat.TEXT and export_config.text_params:
-        export_params = export_config.text_params.dict()
-
-    result = await document_service.convert_document(
-        source=source,
-        enrich_picture_description=True,
-        vision_model=vision_model,
-        export_format=export_config.format,
-        **export_params
+        source=request.source,
+        enrich_code=request.enrich_code,
+        enrich_formula=request.enrich_formula,
+        enrich_pictures=request.enrich_pictures,
+        picture_scale=request.picture_scale,
+        enrich_picture_description=request.enrich_picture_description,
+        vision_model=request.vision_model,
+        export_format=ExportFormat.TEXT,
+        **request.text_params.dict()
     )
     return {"content": result} 
