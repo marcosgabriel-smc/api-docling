@@ -102,3 +102,7 @@ To run the service in development mode with auto-reload:
 ```bash
 uvicorn main:app --reload
 ```
+
+
+## PENDING
+- Fix tests
